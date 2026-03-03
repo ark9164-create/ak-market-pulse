@@ -5,6 +5,7 @@ import https from 'https';
 import http from 'http';
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/ak-market-pulse/' : '/',
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
