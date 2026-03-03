@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/rss-proxy", "destination": "/api/rss-proxy" },
+    { "source": "/yahoo-api/:path*", "destination": "/api/yahoo-proxy/:path*" },
+    { "source": "/fred-api/:path*", "destination": "https://api.stlouisfed.org/:path*" },
+    { "source": "/findata-api/:path*", "destination": "https://api.financialdatasets.ai/:path*" }
+  ]
+}

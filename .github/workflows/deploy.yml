@@ -1,55 +1,19 @@
-name: Deploy to GitHub Pages
+name: Build Check
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+on: [push, pull_request]
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run build
         env:
-          VITE_GROQ_API_KEY:                ${{ secrets.VITE_GROQ_API_KEY }}
-          VITE_FINNHUB_API_KEY:             ${{ secrets.VITE_FINNHUB_API_KEY }}
-          VITE_ALPHA_VANTAGE_API_KEY:       ${{ secrets.VITE_ALPHA_VANTAGE_API_KEY }}
-          VITE_FRED_API_KEY:                ${{ secrets.VITE_FRED_API_KEY }}
-          VITE_FINANCIAL_DATASETS_API_KEY:  ${{ secrets.VITE_FINANCIAL_DATASETS_API_KEY }}
-        run: npm run build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          VITE_FINNHUB_API_KEY: ${{ secrets.VITE_FINNHUB_API_KEY }}
+          VITE_ALPHA_VANTAGE_API_KEY: ${{ secrets.VITE_ALPHA_VANTAGE_API_KEY }}
+          VITE_FRED_API_KEY: ${{ secrets.VITE_FRED_API_KEY }}
+          VITE_FINANCIAL_DATASETS_API_KEY: ${{ secrets.VITE_FINANCIAL_DATASETS_API_KEY }}
