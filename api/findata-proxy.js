@@ -1,9 +1,7 @@
 export default async function handler(req, res) {
-  const slug = req.query.slug || [];
-  const path = '/' + (Array.isArray(slug) ? slug.join('/') : slug);
-  const urlObj = new URL(req.url, 'https://placeholder.com');
-  const qs = urlObj.search;
-  const target = `https://api.financialdatasets.ai${path}${qs}`;
+  const { path, ...rest } = req.query;
+  const qs = new URLSearchParams(rest).toString();
+  const target = `https://api.financialdatasets.ai/${path || ''}${qs ? '?' + qs : ''}`;
   try {
     const r = await fetch(target, {
       headers: {

@@ -1,9 +1,7 @@
 export default async function handler(req, res) {
-  const slug = req.query.slug || [];
-  const path = '/' + (Array.isArray(slug) ? slug.join('/') : slug);
-  const urlObj = new URL(req.url, 'https://placeholder.com');
-  const qs = urlObj.search;
-  const target = `https://query1.finance.yahoo.com${path}${qs}`;
+  const { path, ...rest } = req.query;
+  const qs = new URLSearchParams(rest).toString();
+  const target = `https://query1.finance.yahoo.com/${path || ''}${qs ? '?' + qs : ''}`;
   try {
     const r = await fetch(target, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
