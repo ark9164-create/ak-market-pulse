@@ -1,0 +1,81 @@
+/* map.css — Map container and controls */
+
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.map-container {
+  width: 100%;
+  height: 350px;
+  min-height: 350px;
+  flex-shrink: 0;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+
+.map-container canvas {
+  outline: none;
+}
+
+.map-popup {
+  position: absolute;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  max-width: 250px;
+}
+
+.map-popup h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.map-popup .stat {
+  color: var(--text-secondary);
+  margin: 2px 0;
+}
+
+.map-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+}
+
+.map-controls button {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.map-controls button:hover {
+  border-color: var(--accent);
+}
+
+.map-controls button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .map-container {
+    height: 250px;
+  }
+}
