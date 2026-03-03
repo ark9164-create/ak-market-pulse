@@ -1,12 +1,14 @@
 export default async function handler(req, res) {
-  const rest = req.url.replace(/^\/api\/findata-proxy/, '');
-  const target = `https://api.financialdatasets.ai${rest}`;
-  const apiKey = process.env.VITE_FINANCIAL_DATASETS_API_KEY || '';
+  const slug = req.query.slug || [];
+  const path = '/' + (Array.isArray(slug) ? slug.join('/') : slug);
+  const urlObj = new URL(req.url, 'https://placeholder.com');
+  const qs = urlObj.search;
+  const target = `https://api.financialdatasets.ai${path}${qs}`;
   try {
     const r = await fetch(target, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        'X-API-KEY': apiKey,
+        'X-API-KEY': process.env.VITE_FINANCIAL_DATASETS_API_KEY || '',
       },
     });
     const data = await r.text();
