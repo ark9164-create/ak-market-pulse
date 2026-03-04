@@ -76,6 +76,18 @@
 
 @media (max-width: 768px) {
   .map-container {
-    height: 250px;
+    height: 200px;
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-container {
+    height: 160px;
+    min-height: 160px;
+  }
+  .map-controls button {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }

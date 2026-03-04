@@ -11,6 +11,60 @@
 .col-span-2 { grid-column: span 2; }
 .col-span-3 { grid-column: span 3; }
 
+/* ── Mobile grid ── */
+@media (max-width: 768px) {
+  .panels-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    padding: 6px;
+  }
+  /* Prevent wide panels from breaking layout on tablet */
+  .col-span-2 { grid-column: span 2; }
+  .col-span-3 { grid-column: span 2; }
+}
+
+@media (max-width: 480px) {
+  .panels-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    padding: 5px;
+  }
+  /* All panels single or double but never 3 on phone */
+  .col-span-1 { grid-column: span 1; }
+  .col-span-2 { grid-column: span 2; }
+  .col-span-3 { grid-column: span 2; }
+
+  .panel {
+    min-height: 140px;
+    max-height: 260px;
+  }
+
+  .panel-content {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .panel-header {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  /* Touch-friendly filter chips */
+  .filter-chip {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  /* Tighter rows */
+  .panel-row {
+    padding: 3px 0;
+  }
+
+  .panel-row .name {
+    display: none; /* Hide name column on very small screens */
+  }
+}
+
 .panel {
   background: var(--bg-panel);
   border: 1px solid var(--border);
