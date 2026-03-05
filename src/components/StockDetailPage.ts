@@ -78,9 +78,15 @@ export class StockDetailPage {
       const fundData = fundamentals.status === 'fulfilled' ? fundamentals.value : null;
       const newsData = news.status === 'fulfilled' ? news.value : [];
 
-      this.renderFull(chartData.value, fundData, newsData);
+      try {
+        this.renderFull(chartData.value, fundData, newsData);
+      } catch (renderErr) {
+        console.error('[StockDetail] Render error:', renderErr);
+        this.renderError(renderErr instanceof Error ? renderErr.message : 'Render failed');
+      }
     } catch (err) {
       if (!this.visible) return;
+      console.error('[StockDetail] Load error:', err);
       this.renderError(err instanceof Error ? err.message : 'Unknown error');
     }
   }
@@ -133,8 +139,8 @@ export class StockDetailPage {
 
   private renderFull(chart: ChartData, fundamentals: StockFundamentals | null, news: NewsItem[]): void {
     const { meta } = chart;
-    const price = meta.regularMarketPrice;
-    const prevClose = meta.chartPreviousClose;
+    const price = meta.regularMarketPrice || 0;
+    const prevClose = meta.chartPreviousClose || 0;
     const change = price - prevClose;
     const changePct = prevClose > 0 ? (change / prevClose) * 100 : 0;
     const cls = changeClass(change);
@@ -151,8 +157,8 @@ export class StockDetailPage {
     const header = h('div', { className: 'stock-detail-header' });
     header.innerHTML = `
       <div class="stock-detail-symbol-row">
-        <span class="stock-detail-symbol">${escapeHtml(meta.symbol)}</span>
-        <span class="stock-detail-name">${escapeHtml(meta.longName || meta.shortName)}</span>
+        <span class="stock-detail-symbol">${escapeHtml(meta.symbol || this.currentSymbol)}</span>
+        <span class="stock-detail-name">${escapeHtml(meta.longName || meta.shortName || '')}</span>
       </div>
       <div class="stock-detail-price-row">
         <span class="stock-detail-price">${formatPrice(price)}</span>
