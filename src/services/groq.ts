@@ -1,6 +1,6 @@
-const API_KEY = import.meta.env.VITE_GROQ_API_KEY as string;
-const MODEL = 'llama-3.3-70b-versatile';
-const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY as string;
+const MODEL = (import.meta.env.VITE_OPENROUTER_MODEL as string) || 'minimax/minimax-m2.5';
+const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 interface ChatMessage {
   role: string;
@@ -24,8 +24,8 @@ export async function chatCompletion(
   systemPrompt: string
 ): Promise<string> {
   if (!API_KEY) {
-    console.warn('[Groq] No API key found (VITE_GROQ_API_KEY). Cannot generate analysis.');
-    return 'AI analysis unavailable. Please configure your Groq API key.';
+    console.warn('[OpenRouter] No API key found (VITE_OPENROUTER_API_KEY). Cannot generate analysis.');
+    return 'AI analysis unavailable. Please configure your OpenRouter API key.';
   }
 
   const fullMessages: ChatMessage[] = [
@@ -48,19 +48,19 @@ export async function chatCompletion(
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`Groq API request failed (${response.status}): ${errorBody}`);
+      throw new Error(`OpenRouter API request failed (${response.status}): ${errorBody}`);
     }
 
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content;
 
     if (!content) {
-      throw new Error('Groq API returned empty response');
+      throw new Error('OpenRouter API returned empty response');
     }
 
     return content;
   } catch (error) {
-    console.warn('[Groq] Chat completion failed:', error);
+    console.warn('[OpenRouter] Chat completion failed:', error);
     return 'AI analysis temporarily unavailable. Please try again later.';
   }
 }
