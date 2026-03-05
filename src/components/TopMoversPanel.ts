@@ -1,6 +1,6 @@
 import { Panel } from './Panel';
 import { QuoteData } from '@/app/app-context';
-import { formatPrice, formatPercent, changeClass } from '@/utils/format';
+import { formatPrice, formatChange, formatPercent, formatLargeNumber, changeClass } from '@/utils/format';
 import { renderSparkline } from '@/utils/sparkline';
 import { escapeHtml } from '@/utils/dom';
 
@@ -79,9 +79,11 @@ export class TopMoversPanel extends Panel {
     const rows = top.map((q, i) => {
       const cls = changeClass(q.changePercent);
       const rank = i + 1;
-      return `<div class="panel-row" style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px">
+      const prevClose = (q.price - q.change).toFixed(2);
+      const tt = `<div class='tt-title'>${escapeHtml(q.name)} (${escapeHtml(q.symbol)})</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price)}</span></div><div class='tt-row'><span class='tt-label'>Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>${formatChange(q.change)} (${formatPercent(q.changePercent)})</span></div><div class='tt-row'><span class='tt-label'>Prev Close</span><span class='tt-value'>$${prevClose}</span></div>${q.volume ? `<div class='tt-row'><span class='tt-label'>Volume</span><span class='tt-value'>${q.volume.toLocaleString()}</span></div>` : ''}`;
+      return `<div class="panel-row" data-tooltip="${tt.replace(/"/g, '&quot;')}" style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px">
         <span style="flex:0 0 20px;color:var(--text-muted);text-align:right;font-size:11px">${rank}</span>
-        <span class="symbol" style="flex:0 0 55px;font-weight:700">${escapeHtml(q.symbol)}</span>
+        <span class="symbol" data-stock-symbol="${escapeHtml(q.symbol)}" style="flex:0 0 55px;font-weight:700;cursor:pointer">${escapeHtml(q.symbol)}</span>
         <span class="name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:11px">${escapeHtml(q.name)}</span>
         <span class="price" style="flex:0 0 65px;text-align:right">${formatPrice(q.price)}</span>
         <span class="change ${cls}" style="flex:0 0 60px;text-align:right;font-weight:600">${formatPercent(q.changePercent)}</span>

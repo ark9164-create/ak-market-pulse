@@ -55,7 +55,7 @@ export class CryptoPanel extends Panel {
       const cls = changeClass(q.changePercent);
       const tt = `<div class='tt-title'>${escapeHtml(q.name)}</div><div class='tt-muted'>${escapeHtml(q.symbol)}</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price, 2)}</span></div><div class='tt-row'><span class='tt-label'>24h Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>${formatChange(q.change)} (${formatPercent(q.changePercent)})</span></div>${q.volume ? `<div class='tt-row'><span class='tt-label'>24h Volume</span><span class='tt-value'>$${formatLargeNumber(q.volume)}</span></div>` : ''}${q.marketCap ? `<div class='tt-row'><span class='tt-label'>Market Cap</span><span class='tt-value'>$${formatLargeNumber(q.marketCap)}</span></div>` : ''}`;
       return `<div class="panel-row" data-tooltip="${tt.replace(/"/g, '&quot;')}">
-        <span class="symbol">${escapeHtml(q.symbol)}</span>
+        <span class="symbol" data-stock-symbol="${escapeHtml(q.symbol)}" style="cursor:pointer">${escapeHtml(q.symbol)}</span>
         <span class="name">${escapeHtml(q.name)}</span>
         <span class="price">${formatPrice(q.price, 2)}</span>
         <span class="change ${cls}">${formatPercent(q.changePercent)} 24h</span>

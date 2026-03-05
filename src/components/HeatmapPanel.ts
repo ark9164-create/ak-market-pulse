@@ -66,7 +66,7 @@ export class HeatmapPanel extends Panel {
       const sectorName = SECTOR_NAMES[q.symbol] ?? q.name;
       const tt = `<div class='tt-title'>${escapeHtml(sectorName)}</div><div class='tt-muted'>${escapeHtml(q.symbol)} &middot; Sector ETF</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price)}</span></div><div class='tt-row'><span class='tt-label'>Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>${formatChange(q.change)} (${formatPercent(q.changePercent)})</span></div>${q.volume ? `<div class='tt-row'><span class='tt-label'>Volume</span><span class='tt-value'>${q.volume.toLocaleString()}</span></div>` : ''}`;
       return `<div style="background:${bg};border-radius:4px;padding:8px 4px;text-align:center;color:#fff;font-size:12px;line-height:1.3" data-tooltip="${tt.replace(/"/g, '&quot;')}">
-        <div style="font-weight:600">${escapeHtml(q.symbol)}</div>
+        <div data-stock-symbol="${escapeHtml(q.symbol)}" style="font-weight:600;cursor:pointer">${escapeHtml(q.symbol)}</div>
         <div>${formatPercent(q.changePercent)}</div>
       </div>`;
     }).join('');

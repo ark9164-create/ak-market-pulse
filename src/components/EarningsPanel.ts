@@ -137,7 +137,7 @@ export class EarningsPanel extends Panel {
       const tt = `<div class='tt-title'>${escapeHtml(d.symbol)} Earnings</div><div class='tt-muted'>${escapeHtml(d.date)} &middot; ${status}</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>EPS Est</span><span class='tt-value'>${formatEps(d.epsEstimate)}</span></div><div class='tt-row'><span class='tt-label'>EPS Act</span><span class='tt-value ${d.epsActual !== null && d.epsEstimate !== null ? (d.epsActual >= d.epsEstimate ? 'tt-green' : 'tt-red') : ''}'>${formatEps(d.epsActual)}</span></div>${d.surprise !== null ? `<div class='tt-row'><span class='tt-label'>Surprise</span><span class='tt-value ${d.surprise >= 0 ? 'tt-green' : 'tt-red'}'>${surpriseText}</span></div>` : ''}<hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Rev Est</span><span class='tt-value'>${revEst}</span></div><div class='tt-row'><span class='tt-label'>Rev Act</span><span class='tt-value'>${revAct}</span></div>`;
       return `<div class="panel-row" style="flex-wrap:wrap;gap:4px" data-tooltip="${tt.replace(/"/g, '&quot;')}">
         <span style="min-width:60px;font-size:11px;color:var(--text-secondary)">${escapeHtml(d.date)}</span>
-        <span class="symbol">${escapeHtml(d.symbol)}</span>
+        <span class="symbol" data-stock-symbol="${escapeHtml(d.symbol)}" style="cursor:pointer">${escapeHtml(d.symbol)}</span>
         <span style="font-size:12px">
           <span style="color:var(--text-secondary)">Est</span> ${formatEps(d.epsEstimate)}
         </span>

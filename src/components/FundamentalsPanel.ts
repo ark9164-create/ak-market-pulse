@@ -72,7 +72,7 @@ export class FundamentalsPanel extends Panel {
       const marginCls = d.operatingMargin >= 20 ? 'positive' : d.operatingMargin >= 10 ? 'neutral' : 'negative';
       const fcfCls = changeClass(d.freeCashFlow);
       return `<tr data-tooltip="<div class='tt-title'>${d.ticker}</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-label'>Report Period</span><span class='tt-value'>${d.reportPeriod}</span></div><div class='tt-row'><span class='tt-label'>Total Assets</span><span class='tt-value'>$${formatLargeNumber(d.totalAssets)}</span></div><div class='tt-row'><span class='tt-label'>Total Debt</span><span class='tt-value'>$${formatLargeNumber(d.totalDebt)}</span></div>${d.peRatio != null ? `<div class='tt-row'><span class='tt-label'>P/E Ratio</span><span class='tt-value'>${d.peRatio.toFixed(1)}x</span></div>` : ''}">
-        <td class="sym">${d.ticker}</td>
+        <td class="sym" data-stock-symbol="${d.ticker}" style="cursor:pointer">${d.ticker}</td>
         <td class="num">$${formatLargeNumber(d.revenue)}</td>
         <td class="num">$${formatLargeNumber(d.netIncome)}</td>
         <td class="num">$${d.eps.toFixed(2)}</td>

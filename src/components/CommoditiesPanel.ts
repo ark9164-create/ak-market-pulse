@@ -85,7 +85,7 @@ export class CommoditiesPanel extends Panel {
       const unit = isEnergy ? '/bbl' : isMetal && q.symbol === 'GC=F' ? '/oz' : isMetal && q.symbol === 'SI=F' ? '/oz' : isMetal ? '/lb' : '';
       const tt = `<div class='tt-title'>${escapeHtml(q.name)}</div><div class='tt-muted'>${category}</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price)}${unit}</span></div><div class='tt-row'><span class='tt-label'>Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>${formatChange(q.change)} (${formatPercent(q.changePercent)})</span></div>${q.volume ? `<div class='tt-row'><span class='tt-label'>Volume</span><span class='tt-value'>${q.volume.toLocaleString()}</span></div>` : ''}`;
       return `<div class="panel-row" data-tooltip="${tt.replace(/"/g, '&quot;')}">
-        <span class="symbol">${escapeHtml(q.symbol)}</span>
+        <span class="symbol" data-stock-symbol="${escapeHtml(q.symbol)}" style="cursor:pointer">${escapeHtml(q.symbol)}</span>
         <span class="name">${escapeHtml(q.name)}</span>
         <span class="price">${formatPrice(q.price)}</span>
         <span class="change ${cls}">${formatPercent(q.changePercent)}</span>

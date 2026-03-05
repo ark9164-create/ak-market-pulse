@@ -1,6 +1,6 @@
 import { Panel } from './Panel';
 import { QuoteData } from '@/app/app-context';
-import { formatPercent, changeClass } from '@/utils/format';
+import { formatPrice, formatChange, formatPercent, changeClass } from '@/utils/format';
 import { escapeHtml } from '@/utils/dom';
 
 const SECTOR_NAMES: Record<string, string> = {
@@ -86,8 +86,10 @@ export class SectorRotationPanel extends Panel {
       // Center line at 50%, bars extend left (negative) or right (positive)
       const barX = pct >= 0 ? 50 : 50 - barWidthPct;
 
-      return `<div class="panel-row" style="display:flex;align-items:center;gap:8px;padding:3px 0">
-        <span style="flex:0 0 130px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(sectorName)}</span>
+      const tt = `<div class='tt-title'>${escapeHtml(sectorName)} (${escapeHtml(q.symbol)})</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price)}</span></div><div class='tt-row'><span class='tt-label'>Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>${formatChange(q.change)} (${formatPercent(pct)})</span></div>`;
+
+      return `<div class="panel-row" data-tooltip="${tt.replace(/"/g, '&quot;')}" style="display:flex;align-items:center;gap:8px;padding:3px 0">
+        <span data-stock-symbol="${escapeHtml(q.symbol)}" style="flex:0 0 130px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${escapeHtml(sectorName)}</span>
         <svg style="flex:1;height:20px" viewBox="0 0 100 20" preserveAspectRatio="none">
           <line x1="50" y1="0" x2="50" y2="20" stroke="var(--text-muted)" stroke-width="0.3" stroke-dasharray="2,2" />
           <rect x="${barX.toFixed(1)}" y="4" width="${barWidthPct.toFixed(1)}" height="12" rx="2" fill="${barColor}" opacity="0.85" />

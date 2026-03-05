@@ -82,7 +82,7 @@ export class MarketsPanel extends Panel {
       const prevClose = (q.price - q.change).toFixed(2);
       const tt = `<div class='tt-title'>${escapeHtml(q.name)} (${escapeHtml(q.symbol)})</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price)}</span></div><div class='tt-row'><span class='tt-label'>Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>$${q.change.toFixed(2)} (${formatPercent(q.changePercent)})</span></div><div class='tt-row'><span class='tt-label'>Prev Close</span><span class='tt-value'>$${prevClose}</span></div>${q.volume ? `<div class='tt-row'><span class='tt-label'>Volume</span><span class='tt-value'>${q.volume.toLocaleString()}</span></div>` : ''}${q.marketCap ? `<div class='tt-row'><span class='tt-label'>Market Cap</span><span class='tt-value'>$${mcap}</span></div>` : ''}`;
       return `<div class="panel-row" data-tooltip="${tt.replace(/"/g, '&quot;')}">
-        <span class="symbol">${escapeHtml(q.symbol)}</span>
+        <span class="symbol" data-stock-symbol="${escapeHtml(q.symbol)}" style="cursor:pointer">${escapeHtml(q.symbol)}</span>
         <span class="name">${escapeHtml(q.name)}</span>
         <span class="price">${formatPrice(q.price)}</span>
         <span class="change ${cls}">${formatPercent(q.changePercent)}</span>

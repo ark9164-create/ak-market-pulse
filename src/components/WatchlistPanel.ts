@@ -1,6 +1,6 @@
 import { Panel } from './Panel';
 import { QuoteData } from '@/app/app-context';
-import { formatPrice, formatPercent, changeClass } from '@/utils/format';
+import { formatPrice, formatChange, formatPercent, formatLargeNumber, changeClass } from '@/utils/format';
 import { renderSparkline } from '@/utils/sparkline';
 import { escapeHtml } from '@/utils/dom';
 
@@ -108,9 +108,11 @@ export class WatchlistPanel extends Panel {
         const q = this.quotes.get(sym);
         if (q) {
           const cls = changeClass(q.changePercent);
-          html += `<div class="panel-row" data-symbol="${escapeHtml(sym)}">
+          const prevClose = (q.price - q.change).toFixed(2);
+          const tt = `<div class='tt-title'>${escapeHtml(q.name || sym)} (${escapeHtml(sym)})</div><hr class='tt-divider'><div class='tt-row'><span class='tt-label'>Price</span><span class='tt-value'>$${formatPrice(q.price)}</span></div><div class='tt-row'><span class='tt-label'>Change</span><span class='tt-value ${q.change >= 0 ? 'tt-green' : 'tt-red'}'>${formatChange(q.change)} (${formatPercent(q.changePercent)})</span></div><div class='tt-row'><span class='tt-label'>Prev Close</span><span class='tt-value'>$${prevClose}</span></div>${q.volume ? `<div class='tt-row'><span class='tt-label'>Volume</span><span class='tt-value'>${q.volume.toLocaleString()}</span></div>` : ''}`;
+          html += `<div class="panel-row" data-symbol="${escapeHtml(sym)}" data-tooltip="${tt.replace(/"/g, '&quot;')}">
             <button class="watchlist-remove" data-sym="${escapeHtml(sym)}">&times;</button>
-            <span class="symbol"><strong>${escapeHtml(sym)}</strong></span>
+            <span class="symbol" data-stock-symbol="${escapeHtml(sym)}" style="cursor:pointer"><strong>${escapeHtml(sym)}</strong></span>
             <span class="price">${formatPrice(q.price, 2)}</span>
             <span class="change ${cls}">${formatPercent(q.changePercent)}</span>
             ${q.sparkData ? renderSparkline(q.sparkData) : ''}
@@ -118,7 +120,7 @@ export class WatchlistPanel extends Panel {
         } else {
           html += `<div class="panel-row" data-symbol="${escapeHtml(sym)}">
             <button class="watchlist-remove" data-sym="${escapeHtml(sym)}">&times;</button>
-            <span class="symbol"><strong>${escapeHtml(sym)}</strong></span>
+            <span class="symbol" data-stock-symbol="${escapeHtml(sym)}" style="cursor:pointer"><strong>${escapeHtml(sym)}</strong></span>
             <span class="price">--</span>
           </div>`;
         }
