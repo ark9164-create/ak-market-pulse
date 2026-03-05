@@ -1,6 +1,6 @@
-const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY as string;
-const MODEL = (import.meta.env.VITE_OPENROUTER_MODEL as string) || 'minimax/minimax-m2.5';
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const DEV_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY as string;
+const MODEL = (import.meta.env.VITE_OPENROUTER_MODEL as string) || 'google/gemini-3-flash-preview';
+const IS_DEV = import.meta.env.DEV;
 
 interface ChatMessage {
   role: string;
@@ -23,28 +23,41 @@ export async function chatCompletion(
   messages: ChatMessage[],
   systemPrompt: string
 ): Promise<string> {
-  if (!API_KEY) {
-    console.warn('[OpenRouter] No API key found (VITE_OPENROUTER_API_KEY). Cannot generate analysis.');
-    return 'AI analysis unavailable. Please configure your OpenRouter API key.';
-  }
-
   const fullMessages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     ...messages,
   ];
 
+  const body = JSON.stringify({
+    model: MODEL,
+    messages: fullMessages,
+  });
+
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: fullMessages,
-      }),
-    });
+    let response: Response;
+
+    if (IS_DEV) {
+      // Dev: call OpenRouter directly with local API key
+      if (!DEV_API_KEY) {
+        console.warn('[OpenRouter] No API key found (VITE_OPENROUTER_API_KEY). Cannot generate analysis.');
+        return 'AI analysis unavailable. Please configure your OpenRouter API key.';
+      }
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEV_API_KEY}`,
+        },
+        body,
+      });
+    } else {
+      // Production: use serverless proxy (key stays server-side)
+      response = await fetch('/api/openrouter-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
