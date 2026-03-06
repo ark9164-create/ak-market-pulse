@@ -4,26 +4,77 @@ import { fetchStockChart, fetchStockFundamentals } from '@/services/stock-detail
 import { fetchCompanyNews } from '@/services/finnhub';
 import type { ChartData, StockFundamentals } from '@/services/stock-detail-data';
 
-/* ── Range options ── */
+/* ── TradingView widget script base URL ── */
 
-interface RangeOption {
-  value: string;
-  label: string;
+const TV_SCRIPT_BASE = 'https://s3.tradingview.com/external-embedding/embed-widget-';
+
+/* ── TradingView widget configs (cherry-picked from OpenStock) ── */
+
+function tvChartConfig(symbol: string): Record<string, unknown> {
+  return {
+    allow_symbol_change: false,
+    calendar: false,
+    details: true,
+    hide_side_toolbar: true,
+    hide_top_toolbar: false,
+    hide_legend: false,
+    hide_volume: false,
+    hotlist: false,
+    interval: 'D',
+    locale: 'en',
+    save_image: false,
+    style: 1,
+    symbol: symbol.toUpperCase(),
+    theme: 'dark',
+    timezone: 'Etc/UTC',
+    backgroundColor: '#0f1117',
+    gridColor: '#1a1d29',
+    watchlist: [],
+    withdateranges: true,
+    compareSymbols: [],
+    studies: ['STD;RSI'],
+    width: '100%',
+    height: 500,
+    autosize: true,
+  };
 }
 
-const RANGES: RangeOption[] = [
-  { value: '1d', label: '1D' },
-  { value: '5d', label: '5D' },
-  { value: '1mo', label: '1M' },
-  { value: '3mo', label: '3M' },
-  { value: '6mo', label: '6M' },
-  { value: '1y', label: '1Y' },
-  { value: '5y', label: '5Y' },
-];
+function tvTechnicalConfig(symbol: string): Record<string, unknown> {
+  return {
+    symbol: symbol.toUpperCase(),
+    colorTheme: 'dark',
+    isTransparent: true,
+    locale: 'en',
+    width: '100%',
+    height: 400,
+    interval: '1h',
+    largeChartUrl: '',
+  };
+}
 
-/* ── Chart layout constants ── */
+function tvProfileConfig(symbol: string): Record<string, unknown> {
+  return {
+    symbol: symbol.toUpperCase(),
+    colorTheme: 'dark',
+    isTransparent: true,
+    locale: 'en',
+    width: '100%',
+    height: 440,
+  };
+}
 
-const CHART_PADDING = { top: 12, right: 50, bottom: 28, left: 0 };
+function tvFinancialsConfig(symbol: string): Record<string, unknown> {
+  return {
+    symbol: symbol.toUpperCase(),
+    colorTheme: 'dark',
+    isTransparent: true,
+    locale: 'en',
+    width: '100%',
+    height: 464,
+    displayMode: 'regular',
+    largeChartUrl: '',
+  };
+}
 
 /* ── StockDetailPage ── */
 
@@ -32,8 +83,6 @@ export class StockDetailPage {
   private container: HTMLElement;
   private visible = false;
   private currentSymbol = '';
-  private currentRange = '3mo';
-  private chartData: ChartData | null = null;
   private abortController: AbortController | null = null;
 
   constructor(container: HTMLElement) {
@@ -50,19 +99,16 @@ export class StockDetailPage {
   async show(symbol: string): Promise<void> {
     this.visible = true;
     this.currentSymbol = symbol.toUpperCase();
-    this.currentRange = '3mo';
     this.el.style.display = '';
 
-    // Cancel any pending requests
     this.abortController?.abort();
     this.abortController = new AbortController();
 
     this.renderLoading();
 
     try {
-      // Fetch chart and fundamentals in parallel
       const [chartData, fundamentals, news] = await Promise.allSettled([
-        fetchStockChart(this.currentSymbol, this.currentRange),
+        fetchStockChart(this.currentSymbol, '3mo'),
         fetchStockFundamentals(this.currentSymbol),
         this.fetchNews(this.currentSymbol),
       ]);
@@ -74,7 +120,6 @@ export class StockDetailPage {
         return;
       }
 
-      this.chartData = chartData.value;
       const fundData = fundamentals.status === 'fulfilled' ? fundamentals.value : null;
       const newsData = news.status === 'fulfilled' ? news.value : [];
 
@@ -96,19 +141,17 @@ export class StockDetailPage {
     this.currentSymbol = '';
     this.el.style.display = 'none';
     this.el.innerHTML = '';
-    this.chartData = null;
     this.abortController?.abort();
     this.abortController = null;
   }
 
-  /* ── Private: News fetch helper ── */
+  /* ── News fetch ── */
 
   private async fetchNews(symbol: string): Promise<NewsItem[]> {
     const to = new Date();
     const from = new Date();
     from.setDate(from.getDate() - 30);
     const fmt = (d: Date) => d.toISOString().split('T')[0];
-
     const items = await fetchCompanyNews(symbol, fmt(from), fmt(to));
     return items.slice(0, 15).map(item => ({
       datetime: item.datetime,
@@ -116,6 +159,47 @@ export class StockDetailPage {
       source: item.source,
       url: item.url,
     }));
+  }
+
+  /* ── TradingView widget injection (from OpenStock pattern) ── */
+
+  private injectTradingViewWidget(container: HTMLElement, scriptName: string, config: Record<string, unknown>): void {
+    container.innerHTML = '';
+    const widgetDiv = document.createElement('div');
+    widgetDiv.className = 'tradingview-widget-container__widget';
+    widgetDiv.style.width = '100%';
+    widgetDiv.style.height = '100%';
+    container.appendChild(widgetDiv);
+
+    const script = document.createElement('script');
+    script.src = `${TV_SCRIPT_BASE}${scriptName}.js`;
+    script.async = true;
+    script.innerHTML = JSON.stringify(config);
+    container.appendChild(script);
+  }
+
+  /* ── Sentiment scoring (inspired by stocksight) ── */
+
+  private scoreSentiment(news: NewsItem[]): { score: number; label: string; cls: string } {
+    if (news.length === 0) return { score: 0, label: 'Neutral', cls: 'neutral' };
+
+    const positiveWords = /\b(surge|soar|rally|gain|rise|jump|beat|upgrade|bull|boom|record|strong|growth|profit|outperform)\b/i;
+    const negativeWords = /\b(crash|plunge|fall|drop|decline|miss|downgrade|bear|bust|weak|loss|cut|warn|risk|fail|lawsuit|recall)\b/i;
+
+    let positiveCount = 0;
+    let negativeCount = 0;
+    for (const item of news) {
+      if (positiveWords.test(item.headline)) positiveCount++;
+      if (negativeWords.test(item.headline)) negativeCount++;
+    }
+
+    const total = positiveCount + negativeCount;
+    if (total === 0) return { score: 50, label: 'Neutral', cls: 'neutral' };
+
+    const score = Math.round((positiveCount / total) * 100);
+    if (score >= 65) return { score, label: 'Bullish', cls: 'positive' };
+    if (score <= 35) return { score, label: 'Bearish', cls: 'negative' };
+    return { score, label: 'Mixed', cls: 'neutral' };
   }
 
   /* ── Rendering ── */
@@ -144,6 +228,7 @@ export class StockDetailPage {
     const change = price - prevClose;
     const changePct = prevClose > 0 ? (change / prevClose) * 100 : 0;
     const cls = changeClass(change);
+    const sentiment = this.scoreSentiment(news);
 
     this.el.innerHTML = '';
 
@@ -159,6 +244,7 @@ export class StockDetailPage {
       <div class="stock-detail-symbol-row">
         <span class="stock-detail-symbol">${escapeHtml(meta.symbol || this.currentSymbol)}</span>
         <span class="stock-detail-name">${escapeHtml(meta.longName || meta.shortName || '')}</span>
+        <span class="stock-detail-sentiment ${sentiment.cls}" title="News sentiment (${sentiment.score}/100)">${sentiment.label}</span>
       </div>
       <div class="stock-detail-price-row">
         <span class="stock-detail-price">${formatPrice(price)}</span>
@@ -168,231 +254,60 @@ export class StockDetailPage {
     `;
     this.el.appendChild(header);
 
-    // Chart section
-    this.el.appendChild(this.buildChartSection(chart));
+    // Two-column layout
+    const columns = h('div', { className: 'stock-detail-columns' });
 
-    // Metrics
-    this.el.appendChild(this.buildMetricsSection(meta, fundamentals));
+    // Left column: TradingView Chart + Technical Analysis
+    const leftCol = h('div', { className: 'stock-detail-col-left' });
 
-    // News
+    // TradingView Advanced Chart
+    const chartSection = h('div', { className: 'stock-detail-tv-section stock-detail-tv-chart' });
+    this.injectTradingViewWidget(chartSection, 'advanced-chart', tvChartConfig(this.currentSymbol));
+    leftCol.appendChild(chartSection);
+
+    // TradingView Technical Analysis
+    const taSection = h('div', { className: 'stock-detail-tv-section stock-detail-tv-ta' });
+    const taLabel = h('div', { className: 'stock-detail-section-label' }, 'Technical Analysis');
+    leftCol.appendChild(taLabel);
+    this.injectTradingViewWidget(taSection, 'technical-analysis', tvTechnicalConfig(this.currentSymbol));
+    leftCol.appendChild(taSection);
+
+    columns.appendChild(leftCol);
+
+    // Right column: Metrics + Company Profile + Financials
+    const rightCol = h('div', { className: 'stock-detail-col-right' });
+
+    // Metrics (Price, Volume, Fundamentals, Ratios, Balance Sheet, Cash Flow)
+    rightCol.appendChild(this.buildMetricsSection(meta, fundamentals, price));
+
+    // TradingView Company Profile
+    const profileLabel = h('div', { className: 'stock-detail-section-label' }, 'Company Profile');
+    rightCol.appendChild(profileLabel);
+    const profileSection = h('div', { className: 'stock-detail-tv-section stock-detail-tv-profile' });
+    this.injectTradingViewWidget(profileSection, 'symbol-profile', tvProfileConfig(this.currentSymbol));
+    rightCol.appendChild(profileSection);
+
+    // TradingView Financials
+    const finLabel = h('div', { className: 'stock-detail-section-label' }, 'Financial Statements');
+    rightCol.appendChild(finLabel);
+    const finSection = h('div', { className: 'stock-detail-tv-section stock-detail-tv-financials' });
+    this.injectTradingViewWidget(finSection, 'financials', tvFinancialsConfig(this.currentSymbol));
+    rightCol.appendChild(finSection);
+
+    columns.appendChild(rightCol);
+    this.el.appendChild(columns);
+
+    // News (full width below columns)
     this.el.appendChild(this.buildNewsSection(news));
   }
 
-  /* ── Chart ── */
+  /* ── Metrics (with FinanceToolkit-inspired computed ratios) ── */
 
-  private buildChartSection(chart: ChartData): HTMLElement {
-    const section = h('div', { className: 'stock-detail-chart-section' });
-
-    // Controls
-    const controls = h('div', { className: 'stock-detail-chart-controls' });
-    const label = h('label', null, 'Timeframe');
-    const select = h('select', { className: 'stock-detail-range-select' });
-    for (const r of RANGES) {
-      const opt = h('option', { value: r.value }, r.label);
-      if (r.value === this.currentRange) opt.selected = true;
-      select.appendChild(opt);
-    }
-    select.addEventListener('change', () => {
-      this.currentRange = select.value;
-      this.reloadChart(section);
-    });
-    controls.appendChild(label);
-    controls.appendChild(select);
-    section.appendChild(controls);
-
-    // Chart container
-    const chartContainer = h('div', { className: 'stock-detail-chart-container' });
-    section.appendChild(chartContainer);
-
-    // Render SVG after DOM insertion (need dimensions)
-    requestAnimationFrame(() => {
-      this.renderChart(chartContainer, chart);
-    });
-
-    return section;
-  }
-
-  private async reloadChart(section: HTMLElement): Promise<void> {
-    const chartContainer = section.querySelector('.stock-detail-chart-container') as HTMLElement;
-    if (!chartContainer) return;
-
-    chartContainer.innerHTML = '<div class="stock-detail-loading"><div class="spinner"></div></div>';
-
-    try {
-      const chart = await fetchStockChart(this.currentSymbol, this.currentRange);
-      if (!this.visible) return;
-      this.chartData = chart;
-      chartContainer.innerHTML = '';
-      this.renderChart(chartContainer, chart);
-    } catch (err) {
-      chartContainer.innerHTML = `<div class="stock-detail-error">${escapeHtml(err instanceof Error ? err.message : 'Chart load failed')}</div>`;
-    }
-  }
-
-  private renderChart(container: HTMLElement, chart: ChartData): void {
-    const { timestamps, prices } = chart;
-    if (prices.length < 2) {
-      container.innerHTML = '<div class="stock-detail-error">Not enough data to render chart</div>';
-      return;
-    }
-
-    const rect = container.getBoundingClientRect();
-    const width = rect.width || 800;
-    const height = rect.height || 300;
-    const pad = CHART_PADDING;
-    const plotW = width - pad.left - pad.right;
-    const plotH = height - pad.top - pad.bottom;
-
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice || 1;
-    const pricePadding = priceRange * 0.05;
-    const yMin = minPrice - pricePadding;
-    const yMax = maxPrice + pricePadding;
-    const yRange = yMax - yMin;
-
-    const tMin = timestamps[0];
-    const tMax = timestamps[timestamps.length - 1];
-    const tRange = tMax - tMin || 1;
-
-    // Map data to pixel coordinates
-    const toX = (t: number) => pad.left + ((t - tMin) / tRange) * plotW;
-    const toY = (p: number) => pad.top + (1 - (p - yMin) / yRange) * plotH;
-
-    // Determine color from overall change
-    const isPositive = prices[prices.length - 1] >= prices[0];
-    const colorClass = isPositive ? 'positive' : 'negative';
-
-    // Build SVG path
-    const linePoints = timestamps.map((t, i) => `${toX(t).toFixed(1)},${toY(prices[i]).toFixed(1)}`);
-    const linePath = `M${linePoints.join('L')}`;
-
-    // Area path (fill below line)
-    const bottomY = pad.top + plotH;
-    const areaPath = `${linePath}L${toX(tMax).toFixed(1)},${bottomY}L${toX(tMin).toFixed(1)},${bottomY}Z`;
-
-    // Y-axis grid lines + labels (5 lines)
-    const yGridCount = 5;
-    let yGridHtml = '';
-    for (let i = 0; i <= yGridCount; i++) {
-      const val = yMin + (yRange * i) / yGridCount;
-      const y = toY(val);
-      yGridHtml += `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${width - pad.right}" y2="${y.toFixed(1)}" class="stock-chart-grid-line" />`;
-      yGridHtml += `<text x="${width - pad.right + 6}" y="${(y + 3).toFixed(1)}" class="stock-chart-axis-label" text-anchor="start">${formatPrice(val)}</text>`;
-    }
-
-    // X-axis labels (up to 6)
-    const xLabelCount = Math.min(6, timestamps.length);
-    let xLabelsHtml = '';
-    const isIntraday = this.currentRange === '1d' || this.currentRange === '5d';
-    for (let i = 0; i < xLabelCount; i++) {
-      const idx = Math.round((i / (xLabelCount - 1)) * (timestamps.length - 1));
-      const t = timestamps[idx];
-      const x = toX(t);
-      const d = new Date(t * 1000);
-      const labelText = isIntraday
-        ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-        : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      xLabelsHtml += `<text x="${x.toFixed(1)}" y="${(height - 4).toFixed(1)}" class="stock-chart-axis-label" text-anchor="middle">${labelText}</text>`;
-    }
-
-    const svgNs = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNs, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.innerHTML = `
-      ${yGridHtml}
-      ${xLabelsHtml}
-      <path d="${areaPath}" class="stock-chart-area ${colorClass}" />
-      <path d="${linePath}" class="stock-chart-line ${colorClass}" />
-      <line class="stock-chart-crosshair-line" x1="0" y1="0" x2="0" y2="0" style="display:none" />
-      <circle class="stock-chart-crosshair-dot" r="4" cx="0" cy="0" style="display:none" />
-    `;
-
-    container.appendChild(svg);
-
-    // Tooltip element
-    const tooltip = h('div', { className: 'stock-chart-tooltip' });
-    tooltip.style.display = 'none';
-    container.appendChild(tooltip);
-
-    // Crosshair interaction
-    const crosshairLine = svg.querySelector('.stock-chart-crosshair-line') as SVGLineElement;
-    const crosshairDot = svg.querySelector('.stock-chart-crosshair-dot') as SVGCircleElement;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const svgRect = svg.getBoundingClientRect();
-      const mouseX = ((e.clientX - svgRect.left) / svgRect.width) * width;
-
-      // Find nearest data point
-      const tAtMouse = tMin + ((mouseX - pad.left) / plotW) * tRange;
-      let nearestIdx = 0;
-      let nearestDist = Infinity;
-      for (let i = 0; i < timestamps.length; i++) {
-        const dist = Math.abs(timestamps[i] - tAtMouse);
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestIdx = i;
-        }
-      }
-
-      const px = toX(timestamps[nearestIdx]);
-      const py = toY(prices[nearestIdx]);
-
-      // Update crosshair
-      crosshairLine.setAttribute('x1', px.toFixed(1));
-      crosshairLine.setAttribute('y1', pad.top.toString());
-      crosshairLine.setAttribute('x2', px.toFixed(1));
-      crosshairLine.setAttribute('y2', (pad.top + plotH).toString());
-      crosshairLine.style.display = '';
-
-      crosshairDot.setAttribute('cx', px.toFixed(1));
-      crosshairDot.setAttribute('cy', py.toFixed(1));
-      crosshairDot.style.display = '';
-
-      // Update tooltip
-      const d = new Date(timestamps[nearestIdx] * 1000);
-      const dateStr = isIntraday
-        ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-        : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-      tooltip.innerHTML = `
-        <div class="stock-chart-tooltip-price">${formatPrice(prices[nearestIdx])}</div>
-        <div class="stock-chart-tooltip-date">${dateStr}</div>
-      `;
-      tooltip.style.display = '';
-
-      // Position tooltip
-      const tooltipX = (px / width) * svgRect.width;
-      const tooltipY = (py / height) * svgRect.height;
-      const tooltipW = tooltip.offsetWidth;
-
-      // Flip tooltip if near right edge
-      if (tooltipX + tooltipW + 16 > svgRect.width) {
-        tooltip.style.left = `${tooltipX - tooltipW - 12}px`;
-      } else {
-        tooltip.style.left = `${tooltipX + 12}px`;
-      }
-      tooltip.style.top = `${tooltipY - 20}px`;
-    };
-
-    const handleMouseLeave = () => {
-      crosshairLine.style.display = 'none';
-      crosshairDot.style.display = 'none';
-      tooltip.style.display = 'none';
-    };
-
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
-  }
-
-  /* ── Metrics ── */
-
-  private buildMetricsSection(meta: ChartData['meta'], fundamentals: StockFundamentals | null): HTMLElement {
+  private buildMetricsSection(meta: ChartData['meta'], fundamentals: StockFundamentals | null, price: number): HTMLElement {
     const section = h('div', { className: 'stock-detail-metrics-section' });
 
     // Row 1: Price Metrics
-    section.appendChild(this.buildMetricsRow('Price Metrics', [
+    section.appendChild(this.buildMetricsRow('Price', [
       { label: 'Open', value: meta.regularMarketOpen ? formatPrice(meta.regularMarketOpen) : null },
       { label: 'Day High', value: meta.regularMarketDayHigh ? formatPrice(meta.regularMarketDayHigh) : null },
       { label: 'Day Low', value: meta.regularMarketDayLow ? formatPrice(meta.regularMarketDayLow) : null },
@@ -407,21 +322,53 @@ export class StockDetailPage {
       { label: 'Volume', value: meta.regularMarketVolume ? formatLargeNumber(meta.regularMarketVolume) : null },
       { label: 'Avg Volume', value: meta.averageDailyVolume10Day ? formatLargeNumber(meta.averageDailyVolume10Day) : null },
       { label: 'Market Cap', value: meta.marketCap ? formatLargeNumber(meta.marketCap) : null },
-      { label: '52 Week Range', value: fiftyTwoRange },
+      { label: '52W Range', value: fiftyTwoRange },
     ]));
 
-    // Row 3: Fundamentals (Income Statement)
     const inc = fundamentals?.income;
-    const opMargin = inc && inc.revenue > 0 ? ((inc.operating_income / inc.revenue) * 100).toFixed(1) + '%' : null;
-    section.appendChild(this.buildMetricsRow('Fundamentals', [
-      { label: 'Revenue', value: inc ? formatLargeNumber(inc.revenue) : null },
-      { label: 'Net Income', value: inc ? formatLargeNumber(inc.net_income) : null },
-      { label: 'EPS', value: inc ? formatPrice(inc.earnings_per_share_diluted) : null },
-      { label: 'Operating Margin', value: opMargin },
+    const bal = fundamentals?.balance;
+    const cf = fundamentals?.cashFlow;
+
+    // Row 3: Profitability Ratios (FinanceToolkit inspired)
+    const grossMargin = inc && inc.revenue > 0 ? ((inc.gross_profit / inc.revenue) * 100) : null;
+    const opMargin = inc && inc.revenue > 0 ? ((inc.operating_income / inc.revenue) * 100) : null;
+    const netMargin = inc && inc.revenue > 0 ? ((inc.net_income / inc.revenue) * 100) : null;
+    const roe = inc && bal && bal.shareholders_equity > 0 ? ((inc.net_income / bal.shareholders_equity) * 100) : null;
+
+    section.appendChild(this.buildMetricsRow('Profitability', [
+      { label: 'Gross Margin', value: grossMargin != null ? grossMargin.toFixed(1) + '%' : null, colorize: grossMargin },
+      { label: 'Op Margin', value: opMargin != null ? opMargin.toFixed(1) + '%' : null, colorize: opMargin },
+      { label: 'Net Margin', value: netMargin != null ? netMargin.toFixed(1) + '%' : null, colorize: netMargin },
+      { label: 'ROE', value: roe != null ? roe.toFixed(1) + '%' : null, colorize: roe },
     ]));
 
-    // Row 4: Balance Sheet
-    const bal = fundamentals?.balance;
+    // Row 4: Valuation Ratios (FinanceToolkit inspired)
+    const eps = inc ? inc.earnings_per_share_diluted : null;
+    const pe = eps && eps > 0 && price > 0 ? price / eps : null;
+    const bookValue = bal ? bal.shareholders_equity : null;
+    // Rough shares estimate from market cap / price
+    const sharesEst = meta.marketCap && price > 0 ? meta.marketCap / price : null;
+    const bvps = bookValue != null && sharesEst ? bookValue / sharesEst : null;
+    const pb = bvps && bvps > 0 && price > 0 ? price / bvps : null;
+    const roa = inc && bal && bal.total_assets > 0 ? ((inc.net_income / bal.total_assets) * 100) : null;
+    const debtEquity = bal && bal.shareholders_equity > 0 ? (bal.total_debt / bal.shareholders_equity) : null;
+
+    section.appendChild(this.buildMetricsRow('Valuation', [
+      { label: 'P/E Ratio', value: pe != null ? pe.toFixed(1) + 'x' : null },
+      { label: 'P/B Ratio', value: pb != null ? pb.toFixed(1) + 'x' : null },
+      { label: 'ROA', value: roa != null ? roa.toFixed(1) + '%' : null, colorize: roa },
+      { label: 'Debt/Equity', value: debtEquity != null ? debtEquity.toFixed(2) + 'x' : null },
+    ]));
+
+    // Row 5: Income
+    section.appendChild(this.buildMetricsRow('Income Statement', [
+      { label: 'Revenue', value: inc ? formatLargeNumber(inc.revenue) : null },
+      { label: 'Net Income', value: inc ? formatLargeNumber(inc.net_income) : null, colorize: inc?.net_income },
+      { label: 'EPS', value: eps != null ? formatPrice(eps) : null },
+      { label: 'Op Income', value: inc ? formatLargeNumber(inc.operating_income) : null, colorize: inc?.operating_income },
+    ]));
+
+    // Row 6: Balance Sheet
     section.appendChild(this.buildMetricsRow('Balance Sheet', [
       { label: 'Total Assets', value: bal ? formatLargeNumber(bal.total_assets) : null },
       { label: 'Total Debt', value: bal ? formatLargeNumber(bal.total_debt) : null },
@@ -429,38 +376,37 @@ export class StockDetailPage {
       { label: 'Equity', value: bal ? formatLargeNumber(bal.shareholders_equity) : null },
     ]));
 
-    // Row 5: Cash Flow
-    const cf = fundamentals?.cashFlow;
+    // Row 7: Cash Flow
     section.appendChild(this.buildMetricsRow('Cash Flow', [
-      { label: 'Operating CF', value: cf ? formatLargeNumber(cf.operating_cash_flow) : null },
+      { label: 'Operating CF', value: cf ? formatLargeNumber(cf.operating_cash_flow) : null, colorize: cf?.operating_cash_flow },
       { label: 'CapEx', value: cf ? formatLargeNumber(cf.capital_expenditure) : null },
-      { label: 'Free Cash Flow', value: cf ? formatLargeNumber(cf.free_cash_flow) : null },
+      { label: 'Free Cash Flow', value: cf ? formatLargeNumber(cf.free_cash_flow) : null, colorize: cf?.free_cash_flow },
       { label: 'Dividends Paid', value: cf ? formatLargeNumber(cf.dividends_paid) : null },
     ]));
 
     return section;
   }
 
-  private buildMetricsRow(title: string, metrics: { label: string; value: string | null }[]): HTMLElement {
-    const frag = document.createDocumentFragment();
+  private buildMetricsRow(title: string, metrics: { label: string; value: string | null; colorize?: number | null | undefined }[]): HTMLElement {
+    const wrapper = h('div', null);
 
     const rowLabel = h('div', { className: 'stock-detail-metrics-row-label' }, title);
-    frag.appendChild(rowLabel);
+    wrapper.appendChild(rowLabel);
 
     const grid = h('div', { className: 'stock-detail-metrics-grid' });
     for (const m of metrics) {
       const card = h('div', { className: 'stock-detail-metric-card' });
+      let valueCls = 'stock-detail-metric-value';
+      if (m.value == null) valueCls += ' na';
+      else if (m.colorize != null) valueCls += ` ${changeClass(m.colorize)}`;
+
       card.innerHTML = `
         <div class="stock-detail-metric-label">${escapeHtml(m.label)}</div>
-        <div class="stock-detail-metric-value${m.value == null ? ' na' : ''}">${m.value != null ? escapeHtml(m.value) : '--'}</div>
+        <div class="${valueCls}">${m.value != null ? escapeHtml(m.value) : '--'}</div>
       `;
       grid.appendChild(card);
     }
-    frag.appendChild(grid);
-
-    // Wrap in a container div
-    const wrapper = h('div', null);
-    wrapper.appendChild(frag);
+    wrapper.appendChild(grid);
     return wrapper;
   }
 
